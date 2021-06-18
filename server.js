@@ -1,36 +1,5 @@
 /* eslint-disable no-console */
 
-/*
-The class names returned by MobileNet are as follows: 
-
-Snakes: 
-    thunder snake
-    ringneck snake
-    hognose snake
-    green snake
-    king snake
-    garter snake
-    water snake
-    vine snake
-    night snake
-    boa constrictor
-    rock python
-    Indian cobra
-    green mamba
-    sea snake
-    horned viper
-Cats:
-    tabby
-    tiger cat
-    Persian cat
-    Siamese cat
-    Egyptian cat
-Cars:
-    sports car
-Churches:
-    church
-*/
-
 const Crawler = require('./crawler.js');
 const download = require('image-downloader')
 const tf = require('@tensorflow/tfjs');
@@ -41,21 +10,22 @@ const fs = require('fs');
 const image = require('get-image-data');
 
 var path = require('path');
-
 var express = require('express');
 var app = express();
 var http = require('http').Server(app);
 
 var io = require('socket.io')(http, {
     connectTimeout: 100000,
-    pingInterval: 100000,
-    pingTimeout: 100000
+    pingInterval: 80000,
+    pingTimeout: 90000
 });
 
 var port = process.env.PORT || 3000;
-
 var events = require('events');
 var eventEmitter = new events.EventEmitter();
+var crawler = "";
+var time;
+var interval;
 
 app.use(express.static('download'));
 app.use(express.static('public'));
@@ -67,16 +37,6 @@ http.listen(port, function(){
   console.log('Server is listening for clients on port ' + port + '.');
 });
 
-/*
-app.get('/', function(req, res){
-  res.sendFile(__dirname + '/index.html');
-});
-*/
-
-app.get('/', function(req, res){
-  res.sendFile(__dirname + '/start.html');
-});
-
 let wantedTypes = [];
 let model;
 
@@ -86,11 +46,25 @@ async function loadModel() {
     console.log("Model loaded successfully!");
 };
 
-app.post('/submit-search', (req, res) => {
+/* If for more than 60 seconds we don't receive a message 
+   from crawler it means the search ended. */ 
+function increaseCheckTime() {
+  time += 1;
 
-  console.log("domain: " + req.body.domain);
-  console.log("car: " + req.body.car);
-  console.log("any: " + req.body.any);
+  if (time >= 50) 
+      console.log("Search will stop in " +  (61 - time) + " seconds.");
+
+  if (time > 60) {
+
+    /* Make all socket instances disconnect. */
+    io.disconnectSockets();
+
+    clearInterval(interval);
+    console.log("Socket server disconnected.");
+  }
+}
+
+app.post('/search', (req, res) => {
 
   if (req.body.any === undefined) {
     if (req.body.car)
@@ -107,35 +81,67 @@ app.post('/submit-search', (req, res) => {
       wantedTypes.push(req.body.fox);
   }
 
-  console.log("arr:");
-  console.log(wantedTypes);
+  crawler = new Crawler(req.body.domain);
+  loadModel().then( value => crawler.crawl());
 
-  eventEmitter.emit('start_crawling', req.body.domain);
+  time = 0;
+  interval = setInterval(increaseCheckTime, 1000);
 
-  res.sendFile(__dirname + '/index.html');
+  crawler.on('data', (data) => {
+
+      /* Reset counter if we get a new message from crawler. */ 
+      time = 0;
+
+      if (data.url.endsWith('.jpg') || data.url.endsWith('.jpeg') || data.url.endsWith('.png')) {
+          options = {
+              url: data.url,
+              dest: process.cwd() + '/download',
+          };
+          download.image(options)
+              .then(({ filename }) => {
+
+                  /* Saved to options.dest directory. */
+                  console.log('Image ' + path.basename(filename) + ' saved to ' + path.dirname(filename) + 
+                    ' for content evaluation.');  
+          
+                  predictImage(filename);
+
+              }) 
+              .catch((err) => console.error(err));
+      }
+      else
+          console.log("Patience please. We're at " + data.url + " digging right now.");      
+  });
+
+  crawler.on('error', (error) => console.error(error));
+  crawler.on('end', () => console.log(`Finish! All urls on domain were crawled!`));
+
+  res.sendFile(__dirname + '/search.html');
   
 });
 
-eventEmitter.on('logging', function(message) {
-  io.emit('log_message', message);
+app.get('/', function(req, res) {
+
+  /* Reset image types. */
+  wantedTypes = [];
+
+  res.sendFile(__dirname + '/start.html');
+
 });
 
-
-// Override console.log
+/* Override console.log. */
 var originConsoleLog = console.log;
 console.log = function(data) {
-  eventEmitter.emit('logging', data);
+  io.emit('log_message', data);
   originConsoleLog(data);
 };
 
 function moveImage(pathWithFileName) {
     var newPath = __dirname + '/download/bad_images/' + path.basename(pathWithFileName); 
-
     fs.rename(pathWithFileName, newPath, function (err) {
       if (err) throw err
       io.emit('bad_image', path.basename(newPath));
     })
-
 };
 
 function deleteImage(pathWithFileName) {
@@ -146,6 +152,43 @@ function deleteImage(pathWithFileName) {
         }
     });
 };
+
+/*
+  The class names returned by MobileNet are as below. 
+  Snakes: 
+    thunder snake
+    ringneck snake
+    hognose snake
+    green snake
+    king snake
+    garter snake
+    water snake
+    vine snake
+    night snake
+    boa constrictor
+    rock python
+    Indian cobra
+    green mamba
+    sea snake
+    horned viper
+  Cats:
+    tabby
+    tiger cat
+    Persian cat
+    Siamese cat
+    Egyptian cat
+  Foxes:
+    red fox
+    kit fox
+    Arctic fox
+    grey fox
+  Volcanoes:
+    volcano
+  Cars:
+    sports car
+  Churches:
+    church
+*/
 
 function hasType(predictions) {
 
@@ -216,95 +259,3 @@ const predictImage = async (pathWithFileName) => {
 
   });
 }
-
-
-  /* If for more than 60 seconds we don't receive a message 
-     from crawler it means the search ended. */ 
-  var time;
-  function increaseCheckTime() {
-    time += 1;
-
-    if (time >= 50) 
-        console.log("Search will stop in " +  (61 - time) + " seconds.");
-
-    if (time > 60) {
-      // make all Socket instances disconnect
-      io.disconnectSockets();
-      console.log("Socket server disconnected.");
-    }
-  }
-
-eventEmitter.on('start_crawling', function(message) {
-
-  console.log("message:" + message +"x");
-
-  const crawler = new Crawler(message);
-  loadModel().then( value => crawler.crawl());
-
-  time = 0;
-  setInterval(increaseCheckTime, 1000);
-
-  crawler.on('data', (data) => {
-    
-
-      /* Reset counter if we get a new message from crawler. */ 
-      time = 0;
-
-      if (data.url.endsWith('.jpg') || data.url.endsWith('.jpeg') || data.url.endsWith('.png')) {
-          options = {
-              url: data.url,
-              dest: process.cwd() + '/download',
-          };
-          download.image(options)
-              .then(({ filename }) => {
-
-                  /* Saved to options.dest directory. */
-                  console.log('Image ' + path.basename(filename) + ' saved to ' + path.dirname(filename) + 
-                    ' for content evaluation.');  
-          
-                  predictImage(filename);
-
-              }) 
-              .catch((err) => console.error(err));
-      }
-      else
-          console.log("Patience please. We're at " + data.url + " digging right now.");      
-  });
-  crawler.on('error', (error) => console.error(error));
-  crawler.on('end', () => console.log(`Finish! All urls on domain were crawled!`));
-
-});
-
-
-/*
-const crawler = new Crawler("localhost/candd/gallery");
-loadModel().then( value => crawler.crawl());
-
-crawler.on('data', (data) => {
-    if (data.url.endsWith('.jpg') || data.url.endsWith('.jpeg') || data.url.endsWith('.png')) {
-        options = {
-            url: data.url,
-            dest: process.cwd() + '/download',
-        };
-        download.image(options)
-            .then(({ filename }) => {
-
-                console.log('Image ' + path.basename(filename) + ' saved to ' + path.dirname(filename) + 
-                  ' for content evaluation.');  
-        
-                predictImage(filename);
-
-            }) 
-            .catch((err) => console.error(err));
-    }
-    else
-        console.log("Patience please. We're at " + data.url + " digging right now.");      
-});
-crawler.on('error', (error) => console.error(error));
-crawler.on('end', () => console.log(`Finish! All urls on domain were crawled!`));
-
-app.get('/', function(req, res){
-  res.sendFile(__dirname + '/index.html');
-});
-*/
-

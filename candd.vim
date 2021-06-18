@@ -37,8 +37,9 @@ tabnew
 tabnew
 tabnew
 tabrewind
-edit application.js
+edit server.js
 argglobal
+balt index.html
 setlocal keymap=
 setlocal noarabic
 setlocal noautoindent
@@ -172,9 +173,9 @@ normal! zt
 keepjumps 1
 normal! 0
 tabnext
-edit index.html
+edit search.html
 argglobal
-balt application.js
+balt index.html
 setlocal keymap=
 setlocal noarabic
 setlocal noautoindent
@@ -301,11 +302,11 @@ setlocal wrap
 setlocal wrapmargin=0
 silent! normal! zE
 let &fdl = &fdl
-let s:l = 1 - ((0 * winheight(0) + 16) / 33)
+let s:l = 2 - ((1 * winheight(0) + 16) / 33)
 if s:l < 1 | let s:l = 1 | endif
 keepjumps exe s:l
 normal! zt
-keepjumps 1
+keepjumps 2
 normal! 0
 tabnext
 edit start.html
@@ -437,12 +438,12 @@ setlocal wrap
 setlocal wrapmargin=0
 silent! normal! zE
 let &fdl = &fdl
-let s:l = 1 - ((0 * winheight(0) + 16) / 33)
+let s:l = 57 - ((32 * winheight(0) + 16) / 33)
 if s:l < 1 | let s:l = 1 | endif
 keepjumps exe s:l
 normal! zt
-keepjumps 1
-normal! 015|
+keepjumps 57
+normal! 010|
 tabnext
 edit gallery/index.html
 argglobal
@@ -573,24 +574,28 @@ setlocal wrap
 setlocal wrapmargin=0
 silent! normal! zE
 let &fdl = &fdl
-let s:l = 539 - ((19 * winheight(0) + 16) / 33)
+let s:l = 474 - ((0 * winheight(0) + 16) / 33)
 if s:l < 1 | let s:l = 1 | endif
 keepjumps exe s:l
 normal! zt
-keepjumps 539
+keepjumps 474
 normal! 0
-tabnext 4
+tabnext 1
 set stal=1
+badd +1 server.js
 badd +1 application.js
+badd +1 start.html
+badd +1 gallery/index.html
 badd +1 index.html
-badd +0 start.html
 badd +2 crawler.js
 badd +6 node_modules/image-downloader/index.js
 badd +1 node_modules/image-downloader/lib/request.js
-badd +117 gallery/index.html
 badd +42 ../apptestino/app.js
 badd +245 ../apptestino/routes/api.js
 badd +1 ../apptestino/server.js
+badd +45 package.json
+badd +0 search.html
+badd +279 ~/Downloads/labels_mobilenet_quant_v1_224.txt
 if exists('s:wipebuf') && len(win_findbuf(s:wipebuf)) == 0
   silent exe 'bwipe ' . s:wipebuf
 endif
@@ -601,7 +606,6 @@ if filereadable(s:sx)
   exe "source " . fnameescape(s:sx)
 endif
 let &g:so = s:so_save | let &g:siso = s:siso_save
-nohlsearch
 doautoall SessionLoadPost
 unlet SessionLoad
 " vim: set ft=vim :

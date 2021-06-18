@@ -326,6 +326,11 @@ static getTagsHref(tagName, html) {
 
     if (this.waitingOfConnection === 0 && this.countOfProcessedUrls === this.foundLinks.size) this.emit('end');
   }
+
+  end() {
+    this.emit('end');
+  }
+
 }
 
 module.exports = Crawler;
