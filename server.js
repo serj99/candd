@@ -145,7 +145,7 @@ function moveImage(pathWithFileName) {
 };
 
 function deleteImage(pathWithFileName) {
-    console.log('Can\'t transform image ', pathWithFileName, ' into a Tensor object. To be deleted.');
+    console.log('Can\'t transform image ' + pathWithFileName + ' into a Tensor object. To be deleted.');
     fs.unlinkSync(pathWithFileName, (error) => {
         if (error) {
             console.error(error);
