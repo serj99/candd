@@ -110,25 +110,28 @@
       });
 
       /* If image is what user wants add it on page ready to be zoomed. */
-      socket.on('ok_image', function(msg){
+      socket.on('ok_image', function(imageName, mobilenetProbability, mobilenetGuess){
 
-        $('div.row').append("<div class='column'><img src='" + msg + "' alt='" + msg + "' style='width:100%' " +
+        $('div.row').append("<div class='column'><img src='" + imageName + "' alt='" + imageName 
+          + " MobileNet probability: " + mobilenetProbability + " guess: " + mobilenetGuess + " ' style='width:100%' " +
           "onclick='showFullImage(this);'></div>");
 
-        $('#messages').append($('<li>').text("Hoorah! The image " + msg + " is what you're looking for."));
+        $('#messages').append($('<li>').text("Hoorah! The image " + imageName + " is what you're looking for."));
 
-        console.log('ok image ' + msg);
+        console.log('ok image ' + imageName);
       });
 
       /* If image is not what user wants add it on page and make it less visible . */
-      socket.on('bad_image', function(msg){
+      socket.on('bad_image', function(imageName, mobilenetProbability, mobilenetGuess){
 
-        $('div.row').append("<div class='column'><img src='bad_images/" + msg + "' alt='" + msg + 
-          "' style='width:100%; opacity: 0.2'></div>");
+        $('div.row').append("<div class='column'><img src='bad_images/" + imageName + "' alt='" + imageName  
+          + " MobileNet probability: " + mobilenetProbability + " guess: " + mobilenetGuess 
+          +"' style='width:100%; opacity: 0.2;' " +
+          "onclick='showFullImage(this);'></div>");
 
-        $('#messages').append($('<li>').text("The image " + msg + " doesn't have valid content."));
+        $('#messages').append($('<li>').text("The image " + imageName + " doesn't have valid content."));
 
-        console.log('bad image ' + msg);
+        console.log('bad image ' + imageName);
       });
 
       socket.on("disconnect", (reason) => {

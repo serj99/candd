@@ -26,6 +26,9 @@ var eventEmitter = new events.EventEmitter();
 var crawler = "";
 var time;
 var interval;
+var formProbability = 0.7;
+var mobilenetProbability;
+var mobilenetGuess;
 
 app.use(express.static('download'));
 app.use(express.static('public'));
@@ -81,6 +84,7 @@ app.post('/search', (req, res) => {
       wantedTypes.push(req.body.fox);
   }
 
+  formProbability = req.body.probability;
   crawler = new Crawler(req.body.domain);
   loadModel().then( value => crawler.crawl());
 
@@ -140,7 +144,6 @@ function moveImage(pathWithFileName) {
     var newPath = __dirname + '/download/bad_images/' + path.basename(pathWithFileName); 
     fs.rename(pathWithFileName, newPath, function (err) {
       if (err) throw err
-      io.emit('bad_image', path.basename(newPath));
     })
 };
 
@@ -192,6 +195,9 @@ function deleteImage(pathWithFileName) {
 
 function hasType(predictions) {
 
+    mobilenetProbability = predictions[0].probability;
+    mobilenetGuess = predictions[0].className;
+
     /* If isn't any wanted type keep all images. */
     if (!wantedTypes.length)
         return true;
@@ -216,7 +222,7 @@ function hasType(predictions) {
     if (type === 'tabby')
         type = 'cat';
         
-    if (wantedTypes.find( (e) => e === type) && predictions[0].probability > 0.7)
+    if (wantedTypes.find( (e) => e === type) && predictions[0].probability > formProbability)
         return true;
     
     return false;
@@ -243,10 +249,12 @@ const predictImage = async (pathWithFileName) => {
           const predictions = await model.classify(input);
 
           /* Move image file if it is not of wanted type. */
-          if (!hasType(predictions)) 
+          if (!hasType(predictions)) { 
             moveImage(pathWithFileName);
+            io.emit('bad_image', path.basename(pathWithFileName), mobilenetProbability, mobilenetGuess);
+          }
           else {
-            io.emit('ok_image', path.basename(pathWithFileName));
+            io.emit('ok_image', path.basename(pathWithFileName), mobilenetProbability, mobilenetGuess);
           }
       }
       else {
