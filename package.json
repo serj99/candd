@@ -40,6 +40,7 @@
     "express-reload": "^1.2.0",
     "get-image-data": "^5.0.0",
     "image-downloader": "^4.0.1",
+    "jimp": "^0.16.1",
     "socket.io": "^4.1.2"
   }
 }
